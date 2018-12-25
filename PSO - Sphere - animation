@@ -1,0 +1,178 @@
+##fitness function is f=x1**2+x2**2, get the minimun value （sphere function）
+
+import numpy as np
+import random
+import copy
+import matplotlib.pyplot as plt   
+from mpl_toolkits.mplot3d import Axes3D
+
+##initialize the value of position and velocity
+def initial(n,m):  #n means the number of particle; m refers to the number of variables
+    global X,V
+    
+    for i in range(n):
+        xi = []
+        vi = []
+        for j in range(m):
+            xi.append(random.uniform(-5,5))
+            vi.append(random.uniform(-0.5,0.5))
+        X.append(xi)
+        V.append(vi)
+
+    return X,V
+
+##calculate the value of fitness function of each particle
+def fitness(n,X):
+    global m
+    f = []
+    x = []
+    x.extend([random.randint(0,1) for _ in range(m)])
+    
+    for i in range(n):
+        fvalue = 0
+        for j in range(m):
+            x[j] = X[i][j]
+            fvalue += x[j]**2
+        
+        f.append(fvalue)
+
+    return f
+
+##update velocity and position
+def update(n,m):
+    global V,X,w,c1,c2,r1,r2,Xpbest,Xgbest,vmax
+    for i in range(n):
+        for j in range(m):
+            V[i][j] = w*V[i][j] + c1*r1*(Xpbest[i][j]-X[i][j]) + c2*r2*(Xgbest[j]-X[i][j])
+            #print(i,j,'v',V[i][j])
+            if (V[i][j] < -vmax) :
+                V[i][j] = -vmax
+            if (V[i][j] > vmax) :
+                V[i][j] = vmax
+            X[i][j] = X[i][j] + V[i][j]
+
+    return X,V
+
+
+##static display
+def picture(x,y,z,title):
+    fig = plt.figure() 
+    ax = Axes3D(fig)
+    plt.title(title)
+    ax.set_xlabel('x1')
+    ax.set_ylabel('x2')
+    ax.set_zlabel('f')
+    ax.scatter(x, y, z,c = 'r') 
+    plt.show()
+    
+##dynamic display
+def move_track(x,y,z,title):
+    fig=plt.figure(figsize=(9,6),dpi=120)
+    ax=fig.add_subplot(111,projection='3d')
+     
+    plt.title(title)
+    ax.set_xlabel('x1'); ax.set_xlim([-5,5])
+    ax.set_ylabel('x2'); ax.set_ylim([-5,5])
+    ax.set_zlabel('fitness'); ax.set_zlim([0,25])
+
+    for i in range(len(x)):
+        point=ax.scatter(x[i],y[i],z[i],marker='.',s=10,linewidth=1,alpha=1,cmap='spectral')
+        plt.ion()
+        plt.pause(0.5)
+        plt.close
+    plt.show()
+
+
+X = []  #position of all particle, each element contains 2 position variables
+V = []  #velocity of all particle, each element stands for the velocity of relative particle
+F = []  #the fitness function value of each particle
+Xiter = [] #record the track of each particle
+n = 5
+m = 2  #which are x1 and x2
+w = 0.8 #inertial weight
+c1 = c2 = 2 #acceleration factor
+r1 = random.uniform(0,1)
+r2 = random.uniform(0,1) #random number
+vmax = 1
+trackx = []; tracky = []; trackz = []   #track and value for 1st particle
+
+##initialize the position and velocity.
+initial(n,m)
+
+Xiter.append(np.array(X))
+trackx.append(X[0][0])
+tracky.append(X[0][1])
+
+for iteration in range(100):
+    print('iteration',iteration)
+    if iteration == 0:
+        ##get the original pbest and gbest
+        F.append(fitness(n,X))
+        pbest = copy.deepcopy(F[0])
+        gbest = min(pbest)
+        g = pbest.index(gbest)    #get the serial number of gbest value in the list to find the gbest position.
+        Xpbest = copy.deepcopy(X) #which is a list
+        Xgbest = Xpbest[g]        #which is a position (x1,x2)
+        print('pbest',pbest)
+        
+        if abs(gbest - 0) < 1e-4:
+            print('the minimun value is: ',gbest,'the position is: ',Xgbest)
+            break
+        
+        ##update velocity and position
+        update(n,m)
+        Xiter.append(np.array(X))
+        trackx.append(X[0][0])
+        tracky.append(X[0][1])
+        trackz.append(F[0][0])
+        
+        
+    else:
+        F.append(fitness(n,X))
+        trackz.append(F[iteration][0])
+        
+        ##find the value and position of pbest and gbest
+        for i in range(n):
+            if pbest[i] > F[-1][i] :
+                pbest[i] = F[-1][i]
+                for j in range(m):
+                    Xpbest[i][j] = X[i][j]
+                
+        
+        if gbest > min(pbest):
+            gbest = min(pbest)
+            g = pbest.index(gbest)
+            Xgbest = Xpbest[g]
+        print('gbest',gbest,'position',Xgbest)
+        
+        if abs(gbest - 0) < 1e-4:
+            print('the minimun value is: ',gbest,'the position is: ',Xgbest)
+            break
+        
+        ##update velocity and position
+        update(n,m)
+        Xiter.append(np.array(X))
+        trackx.append(X[0][0])
+        tracky.append(X[0][1])
+        
+
+##visualize the track
+x = []; y = []; z = []  #track and value for each particle. x means x1, y means x2, z means the value of function.
+for i in range(iteration+1):
+    xi = []; yi = []
+    for j in range(n):
+        xi.append(Xiter[i][j][0])
+        yi.append(Xiter[i][j][1])
+    x.append(xi)
+    y.append(yi)
+    z.append(F[i])
+            
+#track of single particle
+picture(trackx,tracky,trackz,'single')
+
+move_track(trackx,tracky,trackz,'track of particle_1')
+  
+#movement of swarm at each iteration
+picture(x,y,z,'swarm')
+
+move_track(x,y,z,'track of swarm')
